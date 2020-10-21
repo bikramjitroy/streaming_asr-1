@@ -19,24 +19,6 @@ serversocket.listen(5)
 read_list = [serversocket]
 print ("recording...")
 
-# try:
-#     while True:
-#         readable, writable, errored = select.select(read_list, [], [])
-#         for s in readable:
-#             if s is serversocket:
-#                 (clientsocket, address) = serversocket.accept()
-#                 read_list.append(clientsocket)
-#                 print ("Connection from", address)
-#             else:
-#                 data = s.recv(1024)
-#                 if not data:
-#                     read_list.remove(s)
-#
-# except KeyboardInterrupt:
-#     pass
-
-
-
 class MicrophoneStream(object):
 
     def __init__(self, rate, chunk):
@@ -70,31 +52,8 @@ class MicrophoneStream(object):
 
     def _fill_buffer(self, data, *args, **kwargs):
         """Continuously collect data from the audio stream, into the buffer."""
-        try:
-            while True:
-                readable, writable, errored = select.select(read_list, [], [])
-                for s in readable:
-                    if s is serversocket:
-                        (clientsocket, address) = serversocket.accept()
-                        read_list.append(clientsocket)
-                        print("Connection from", address)
-                    else:
-                        data = s.recv(1024)
-                        self._buff.put(data)
-                        if not data:
-                            read_list.remove(s)
-
-        except socket.error:
-            print("error....")
-            pass
-        # finally:
-        # #     # clientsocket.close()
-        #      print("closingggg")
-        #     socket.close()
-
-        # self._buff.put(data)
+        self._buff.put(data)
         return None, pyaudio.paContinue
-
 
     def generator(self):
         while not self.closed:
@@ -103,7 +62,6 @@ class MicrophoneStream(object):
             if chunk is None:
                 return
             data = [chunk]
-
 
             while True:
                 try:
@@ -148,15 +106,11 @@ def listen_print_loop(responses):
                 # serversocket.close()
                 break
 
-            # elif KeyboardInterrupt:
-            #     serversocket.close()
-            #     break
 
             num_chars_printed = 0
 
 
 def main():
-
 
     client = speech.SpeechClient()
     config = speech.RecognitionConfig(
@@ -179,3 +133,25 @@ def main():
 
 if __name__ == '__main__':
     main()
+    try:
+        while True:
+            readable, writable, errored = select.select(read_list, [], [])
+            for s in readable:
+                if s is serversocket:
+                    (clientsocket, address) = serversocket.accept()
+                    print("Connection from", address[0] + ':' + str(address[1]))
+                    read_list.append(clientsocket)
+                else:
+                    data = s.recv(1024)
+                    print("getting data....")
+                    # self._buff.put(data)
+                    if not data:
+                        print("not getting data....")
+                        read_list.remove(s)
+
+    except socket.error:
+        print("erorr....")
+
+    print("finished recording")
+    serversocket.close()
+
