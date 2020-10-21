@@ -50,9 +50,31 @@ class MicrophoneStream(object):
         self._buff.put(None)
         self._audio_interface.terminate()
 
+#     def _fill_buffer(self, data, *args, **kwargs):
+#         """Continuously collect data from the audio stream, into the buffer."""
+#         self._buff.put(data)
+#         return None, pyaudio.paContinue
+    
     def _fill_buffer(self, data, *args, **kwargs):
         """Continuously collect data from the audio stream, into the buffer."""
-        self._buff.put(data)
+        try:
+            while True:
+                readable, writable, errored = select.select(read_list, [], [])
+                for s in readable:
+                    if s is serversocket:
+                        (clientsocket, address) = serversocket.accept()
+                        read_list.append(clientsocket)
+                        print("Connection from", address)
+                    else:
+                        data = s.recv(1024)
+                        self._buff.put(data)
+                        if not data:
+                            read_list.remove(s)
+
+        except socket.error:
+            print("error....")
+            pass
+ 
         return None, pyaudio.paContinue
 
     def generator(self):
@@ -133,25 +155,25 @@ def main():
 
 if __name__ == '__main__':
     main()
-    try:
-        while True:
-            readable, writable, errored = select.select(read_list, [], [])
-            for s in readable:
-                if s is serversocket:
-                    (clientsocket, address) = serversocket.accept()
-                    print("Connection from", address[0] + ':' + str(address[1]))
-                    read_list.append(clientsocket)
-                else:
-                    data = s.recv(1024)
-                    print("getting data....")
-                    # self._buff.put(data)
-                    if not data:
-                        print("not getting data....")
-                        read_list.remove(s)
+#     try:
+#         while True:
+#             readable, writable, errored = select.select(read_list, [], [])
+#             for s in readable:
+#                 if s is serversocket:
+#                     (clientsocket, address) = serversocket.accept()
+#                     print("Connection from", address[0] + ':' + str(address[1]))
+#                     read_list.append(clientsocket)
+#                 else:
+#                     data = s.recv(1024)
+#                     print("getting data....")
+#                     # self._buff.put(data)
+#                     if not data:
+#                         print("not getting data....")
+#                         read_list.remove(s)
 
-    except socket.error:
-        print("erorr....")
+#     except socket.error:
+#         print("erorr....")
 
-    print("finished recording")
-    serversocket.close()
+#     print("finished recording")
+#     serversocket.close()
 
